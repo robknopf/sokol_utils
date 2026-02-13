@@ -2,11 +2,15 @@
 
 Extension utilities for the [sokol](https://github.com/floooh/sokol) headers.
 
-Currently, this repository contains `sokol_app_utils.h`, which provides additional functionality for `sokol_app.h` that isn't available in the core library.
+Currently, this repository contains:
+- `sokol_app_utils.h`: Additional functionality for `sokol_app.h`.
+- `sokol_gfx_utils.h`: Additional functionality for `sokol_gfx.h` (currently readback support).
 
 ## Usage
 
-Include `sokol_app_utils.h` *after* the `sokol_app.h` implementation. To create the implementation, define `SOKOL_APP_UTILS_IMPL` in exactly one C or C++ file.
+Include the utility headers *after* the corresponding sokol header implementation. To create the implementation, define the corresponding `_IMPL` macro in exactly one C or C++ file.
+
+### sokol_app_utils.h
 
 ```c
 #define SOKOL_IMPL
@@ -16,7 +20,19 @@ Include `sokol_app_utils.h` *after* the `sokol_app.h` implementation. To create 
 #include "sokol_app_utils.h"
 ```
 
+### sokol_gfx_utils.h
+
+```c
+#define SOKOL_IMPL
+#include "sokol_gfx.h"
+
+#define SOKOL_GFX_UTILS_IMPL
+#include "sokol_gfx_utils.h"
+```
+
 ## API
+
+### sokol_app_utils.h
 
 ```c
 void sapp_set_window_position(int x, int y);
@@ -33,3 +49,12 @@ void sapp_set_fullscreen(bool enable);
 ```
 
 *Note: Most of these functions are only supported on desktop platforms (Windows, macOS, Linux).*
+
+### sokol_gfx_utils.h
+
+```c
+void* sg_readback_request(sg_image img);
+bool sg_readback_is_ready(void* request);
+void sg_readback_copy_data(void* request, void* out_pixels);
+void sg_readback_destroy(void* request);
+```
