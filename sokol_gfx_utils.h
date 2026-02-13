@@ -49,6 +49,12 @@ SOKOL_GFX_UTILS_API_DECL void* sg_readback_request(sg_image img);
 SOKOL_GFX_UTILS_API_DECL bool sg_readback_is_ready(void* request);
 
 /*
+    sg_readback_wait
+    Synchronously wait until the readback request has completed.
+*/
+SOKOL_GFX_UTILS_API_DECL void sg_readback_wait(void* request);
+
+/*
     sg_readback_copy_data
     Copies the readback data into the provided buffer.
     The buffer must be large enough to hold width * height * 4 bytes (for RGBA8).
@@ -74,6 +80,10 @@ SOKOL_GFX_UTILS_API_DECL void sg_readback_destroy(void* request);
 
 #include <stdlib.h> // malloc, free
 #include <string.h> // memcpy
+
+#ifndef GFX_READBACK_TIMEOUT_MS
+#define GFX_READBACK_TIMEOUT_MS (2000)
+#endif
 
 #ifndef _SOKOL_PRIVATE
     #if defined(__GNUC__) || defined(__clang__)
@@ -154,6 +164,21 @@ _SOKOL_PRIVATE void* _sgu_mtl_readback_request(sg_image img) {
 _SOKOL_PRIVATE bool _sgu_mtl_readback_is_ready(void* request) {
     _sgu_mtl_readback_request_t* req = (_sgu_mtl_readback_request_t*)request;
     return [req->cmd_buffer status] == MTLCommandBufferStatusCompleted;
+}
+
+_SOKOL_PRIVATE void _sgu_mtl_readback_wait(void* request) {
+    _sgu_mtl_readback_request_t* req = (_sgu_mtl_readback_request_t*)request;
+    if (req->cmd_buffer) {
+        int timeout_ms = GFX_READBACK_TIMEOUT_MS;
+        while (timeout_ms > 0) {
+            MTLCommandBufferStatus status = [req->cmd_buffer status];
+            if (status >= MTLCommandBufferStatusCompleted) {
+                break;
+            }
+            [NSThread sleepForTimeInterval:0.001];
+            timeout_ms--;
+        }
+    }
 }
 
 _SOKOL_PRIVATE void _sgu_mtl_readback_copy_data(void* request, void* out_pixels) {
@@ -239,6 +264,11 @@ _SOKOL_PRIVATE bool _sgu_gl_readback_is_ready(void* request) {
     return (res == GL_ALREADY_SIGNALED || res == GL_CONDITION_SATISFIED);
 }
 
+_SOKOL_PRIVATE void _sgu_gl_readback_wait(void* request) {
+    _sgu_gl_readback_request_t* req = (_sgu_gl_readback_request_t*)request;
+    glClientWaitSync(req->sync, GL_SYNC_FLUSH_COMMANDS_BIT, (GLuint64)GFX_READBACK_TIMEOUT_MS * 1000000);
+}
+
 _SOKOL_PRIVATE void _sgu_gl_readback_copy_data(void* request, void* out_pixels) {
     _sgu_gl_readback_request_t* req = (_sgu_gl_readback_request_t*)request;
     glBindBuffer(GL_PIXEL_PACK_BUFFER, req->pbo);
@@ -318,6 +348,21 @@ _SOKOL_PRIVATE bool _sgu_d3d11_readback_is_ready(void* request) {
     return false;
 }
 
+_SOKOL_PRIVATE void _sgu_d3d11_readback_wait(void* request) {
+    _sgu_d3d11_readback_request_t* req = (_sgu_d3d11_readback_request_t*)request;
+    ID3D11DeviceContext* ctx = _sg.d3d11.ctx;
+    int timeout_ms = GFX_READBACK_TIMEOUT_MS;
+    while (timeout_ms > 0) {
+        D3D11_MAPPED_SUBRESOURCE mapped;
+        HRESULT hr = ctx->Map(req->staging_tex, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped);
+        if (hr == S_OK) {
+            ctx->Unmap(req->staging_tex, 0);
+            break;
+        }
+        timeout_ms--;
+    }
+}
+
 _SOKOL_PRIVATE void _sgu_d3d11_readback_copy_data(void* request, void* out_pixels) {
     _sgu_d3d11_readback_request_t* req = (_sgu_d3d11_readback_request_t*)request;
     ID3D11DeviceContext* ctx = _sg.d3d11.ctx;
@@ -366,6 +411,17 @@ SOKOL_API_IMPL bool sg_readback_is_ready(void* request) {
     return _sgu_d3d11_readback_is_ready(request);
 #else
     return false;
+#endif
+}
+
+SOKOL_API_IMPL void sg_readback_wait(void* request) {
+    if (!request) return;
+#if defined(SOKOL_METAL)
+    _sgu_mtl_readback_wait(request);
+#elif defined(_SOKOL_ANY_GL)
+    _sgu_gl_readback_wait(request);
+#elif defined(SOKOL_D3D11)
+    _sgu_d3d11_readback_wait(request);
 #endif
 }
 

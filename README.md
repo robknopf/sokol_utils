@@ -55,6 +55,7 @@ void sapp_set_fullscreen(bool enable);
 ```c
 void* sg_readback_request(sg_image img);
 bool sg_readback_is_ready(void* request);
+void sg_readback_wait(void* request);
 void sg_readback_copy_data(void* request, void* out_pixels);
 void sg_readback_destroy(void* request);
 ```
