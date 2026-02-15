@@ -118,7 +118,7 @@ _SOKOL_PRIVATE void* _sgu_mtl_readback_request(sg_image img) {
 
     int slot = img_ptr->cmn.active_slot;
     int mtl_id = img_ptr->mtl.tex[slot];
-    id<MTLTexture> tex = (__bridge id<MTLTexture>)_sg.mtl.idpool.pool[mtl_id];
+    id<MTLTexture> tex = (id<MTLTexture>)_sg.mtl.idpool.pool[mtl_id];
     if (!tex) {
         return NULL;
     }
@@ -152,7 +152,9 @@ _SOKOL_PRIVATE void* _sgu_mtl_readback_request(sg_image img) {
     _sgu_mtl_readback_request_t* req = (_sgu_mtl_readback_request_t*) malloc(sizeof(_sgu_mtl_readback_request_t));
     req->buffer = read_buffer;
     req->cmd_buffer = cmd_buffer;
+#if !__has_feature(objc_arc)
     [req->cmd_buffer retain];
+#endif
     req->width = width;
     req->height = height;
     req->padded_bytes_per_row = padded_bytes_per_row;
@@ -197,8 +199,10 @@ _SOKOL_PRIVATE void _sgu_mtl_readback_copy_data(void* request, void* out_pixels)
 
 _SOKOL_PRIVATE void _sgu_mtl_readback_destroy(void* request) {
     _sgu_mtl_readback_request_t* req = (_sgu_mtl_readback_request_t*)request;
+#if !__has_feature(objc_arc)
     [req->buffer release];
     [req->cmd_buffer release];
+#endif
     free(req);
 }
 
