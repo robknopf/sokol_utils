@@ -42,9 +42,9 @@ void sapp_get_window_size(int *w, int *h);
 int sapp_screen_width(void);
 int sapp_screen_height(void);
 bool sapp_window_focused(void);
-int sapp_num_monitors(void);
-int sapp_current_monitor(void);
-void sapp_set_monitor(int index);
+int sapp_num_displays(void);
+int sapp_current_display(void);
+void sapp_set_display(int index);
 void sapp_set_fullscreen(bool enable);
 ```
 
