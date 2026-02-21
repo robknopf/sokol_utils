@@ -355,6 +355,7 @@ _SOKOL_PRIVATE void _sapp_win32_set_monitor(int index) {
 #endif /* _SAPP_WIN32 */
 
 #if defined(_SAPP_LINUX)
+#include <X11/extensions/Xrandr.h>
 _SOKOL_PRIVATE void _sapp_x11_set_window_position(int x, int y) {
   XMoveWindow(_sapp.x11.display, _sapp.x11.window, x, y);
 }
