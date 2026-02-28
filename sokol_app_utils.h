@@ -182,6 +182,13 @@ _SOKOL_PRIVATE void _sapp_macos_set_display(int index) {
   if (_sapp.macos.window) {
     NSArray *screens = [NSScreen screens];
     if ((index >= 0) && (index < (int)[screens count])) {
+      /* NOTE: native macOS fullscreen spaces are screen-locked.
+         To move a fullscreen window to another screen, we must exit and re-enter.
+      */
+      bool was_fullscreen = _sapp.fullscreen;
+      if (was_fullscreen) {
+        _sapp_macos_toggle_fullscreen();
+      }
       NSScreen *screen = [screens objectAtIndex:(NSUInteger)index];
       NSRect screen_frame = [screen frame];
       NSRect window_frame = [_sapp.macos.window frame];
@@ -190,6 +197,9 @@ _SOKOL_PRIVATE void _sapp_macos_set_display(int index) {
       CGFloat y = screen_frame.origin.y +
                   (screen_frame.size.height - window_frame.size.height) / 2.0f;
       [_sapp.macos.window setFrameOrigin:NSMakePoint(x, y)];
+      if (was_fullscreen) {
+        _sapp_macos_toggle_fullscreen();
+      }
     }
   }
 }
@@ -362,14 +372,26 @@ _SOKOL_PRIVATE void _sapp_win32_set_display(int index) {
     EnumDisplayMonitors(NULL, NULL, _sapp_win32_display_enum_proc, (LPARAM)&data);
     if (data.found) {
       RECT r = data.rect;
-      RECT win_rect;
-      GetWindowRect(_sapp.win32.hwnd, &win_rect);
-      int w = win_rect.right - win_rect.left;
-      int h = win_rect.bottom - win_rect.top;
-      int x = r.left + (r.right - r.left - w) / 2;
-      int y = r.top + (r.bottom - r.top - h) / 2;
-      SetWindowPos(_sapp.win32.hwnd, NULL, x, y, 0, 0,
-                   SWP_NOSIZE | SWP_NOZORDER);
+      if (_sapp.fullscreen) {
+        /* If already fullscreen, just move the borderless window to the new monitor */
+        const int w = r.right - r.left;
+        const int h = r.bottom - r.top;
+        SetWindowPos(_sapp.win32.hwnd, HWND_TOP, r.left, r.top, w, h, SWP_SHOWWINDOW | SWP_FRAMECHANGED);
+        /* Also update the stored rect so exiting fullscreen stays on the new monitor */
+        _sapp.win32.stored_window_rect.left += r.left;
+        _sapp.win32.stored_window_rect.top += r.top;
+        _sapp.win32.stored_window_rect.right += r.left;
+        _sapp.win32.stored_window_rect.bottom += r.top;
+      } else {
+        RECT win_rect;
+        GetWindowRect(_sapp.win32.hwnd, &win_rect);
+        int w = win_rect.right - win_rect.left;
+        int h = win_rect.bottom - win_rect.top;
+        int x = r.left + (r.right - r.left - w) / 2;
+        int y = r.top + (r.bottom - r.top - h) / 2;
+        SetWindowPos(_sapp.win32.hwnd, NULL, x, y, 0, 0,
+                     SWP_NOSIZE | SWP_NOZORDER);
+      }
     }
   }
 }
@@ -518,11 +540,19 @@ _SOKOL_PRIVATE void _sapp_x11_set_display(int index) {
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
   if (displays) {
     if (index >= 0 && index < num_displays) {
-      XWindowAttributes attribs;
-      XGetWindowAttributes(_sapp.x11.display, _sapp.x11.window, &attribs);
-      int x = displays[index].x + (displays[index].width - attribs.width) / 2;
-      int y = displays[index].y + (displays[index].height - attribs.height) / 2;
-      XMoveWindow(_sapp.x11.display, _sapp.x11.window, x, y);
+      if (_sapp.fullscreen) {
+        /* If already fullscreen, move and resize to new monitor */
+        XMoveResizeWindow(_sapp.x11.display, _sapp.x11.window,
+                          displays[index].x, displays[index].y,
+                          (unsigned int)displays[index].width, (unsigned int)displays[index].height);
+      } else {
+        XWindowAttributes attribs;
+        XGetWindowAttributes(_sapp.x11.display, _sapp.x11.window, &attribs);
+        int x = displays[index].x + (displays[index].width - attribs.width) / 2;
+        int y = displays[index].y + (displays[index].height - attribs.height) / 2;
+        XMoveWindow(_sapp.x11.display, _sapp.x11.window, x, y);
+      }
+      XFlush(_sapp.x11.display);
     }
     XRRFreeMonitors(displays);
   }
