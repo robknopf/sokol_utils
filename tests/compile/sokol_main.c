@@ -1,7 +1,7 @@
 #include "sokol_app.h"
 
-#if defined(SOKOL_DUMMY_BACKEND)
-int main() {
+#if defined(SOKOL_NO_ENTRY) || defined(SOKOL_DUMMY_BACKEND) || defined(SOKOL_NOAPI)
+int main(void) {
     return 0;
 }
 #else

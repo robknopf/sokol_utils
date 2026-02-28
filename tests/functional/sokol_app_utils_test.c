@@ -1,5 +1,7 @@
 #define SOKOL_IMPL
+#ifndef SOKOL_NO_ENTRY
 #define SOKOL_NO_ENTRY
+#endif
 #include "sokol_app.h"
 #define SOKOL_APP_UTILS_IMPL
 #include "sokol_app_utils.h"

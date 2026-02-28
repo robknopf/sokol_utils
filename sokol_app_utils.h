@@ -215,6 +215,49 @@ _SOKOL_PRIVATE const char* _sapp_macos_display_name(int index) {
 #endif /* _SAPP_MACOS */
 
 #if defined(_SAPP_WIN32)
+typedef struct {
+    int target_index;
+    int index;
+    bool found;
+    bool fetch_name;
+    HMONITOR h_display;
+    RECT rect;
+    char name[128];
+} _sapp_win32_display_enum_t;
+
+_SOKOL_PRIVATE BOOL CALLBACK _sapp_win32_display_enum_proc(HMONITOR h_monitor, HDC h_dc, LPRECT lprc_monitor, LPARAM dw_data) {
+    (void)h_dc; (void)lprc_monitor;
+    _sapp_win32_display_enum_t* data = (_sapp_win32_display_enum_t*)dw_data;
+    if (data->h_display) {
+        if (data->h_display == h_monitor) {
+            data->found = true;
+            MONITORINFO mi;
+            memset(&mi, 0, sizeof(mi));
+            mi.cbSize = sizeof(mi);
+            GetMonitorInfo(h_monitor, &mi);
+            data->rect = mi.rcMonitor;
+            return FALSE;
+        }
+        data->index++;
+    } else {
+        if (data->index == data->target_index) {
+            data->found = true;
+            MONITORINFOEX mi;
+            memset(&mi, 0, sizeof(mi));
+            mi.cbSize = sizeof(mi);
+            GetMonitorInfo(h_monitor, (MONITORINFO*)&mi);
+            data->rect = mi.rcMonitor;
+            if (data->fetch_name) {
+                strncpy(data->name, mi.szDevice, sizeof(data->name));
+                data->name[sizeof(data->name)-1] = 0;
+            }
+            return FALSE;
+        }
+        data->index++;
+    }
+    return TRUE;
+}
+
 _SOKOL_PRIVATE void _sapp_win32_set_window_position(int x, int y) {
   SetWindowPos(_sapp.win32.hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 }
