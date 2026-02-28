@@ -8,6 +8,8 @@ Currently, this repository contains:
 
 ## Usage
 
+This project's tests assumes that the [sokol](https://github.com/floooh/sokol) repository is located in the parent directory (`../sokol`).
+
 Include the utility headers *after* the corresponding sokol header implementation. To create the implementation, define the corresponding `_IMPL` macro in exactly one C or C++ file.
 
 ### sokol_app_utils.h
@@ -39,12 +41,13 @@ void sapp_set_window_position(int x, int y);
 void sapp_set_window_size(int w, int h);
 void sapp_get_window_position(int *x, int *y);
 void sapp_get_window_size(int *w, int *h);
-int sapp_screen_width(void);
-int sapp_screen_height(void);
+int sapp_display_width(int index);
+int sapp_display_height(int index);
 bool sapp_window_focused(void);
 int sapp_num_displays(void);
 int sapp_current_display(void);
 void sapp_set_display(int index);
+const char* sapp_display_name(int index);
 void sapp_set_fullscreen(bool enable);
 ```
 

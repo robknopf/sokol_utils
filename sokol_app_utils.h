@@ -182,7 +182,7 @@ _SOKOL_PRIVATE void _sapp_macos_set_display(int index) {
   if (_sapp.macos.window) {
     NSArray *screens = [NSScreen screens];
     if ((index >= 0) && (index < (int)[screens count])) {
-      NSScreen *screen = [screens objectAtIndex:index];
+      NSScreen *screen = [screens objectAtIndex:(NSUInteger)index];
       NSRect screen_frame = [screen frame];
       NSRect window_frame = [_sapp.macos.window frame];
       CGFloat x = screen_frame.origin.x +
@@ -197,7 +197,7 @@ _SOKOL_PRIVATE void _sapp_macos_set_display(int index) {
 _SOKOL_PRIVATE const char* _sapp_macos_display_name(int index) {
   NSArray *screens = [NSScreen screens];
   if (index >= 0 && index < (int)[screens count]) {
-    NSScreen *screen = [screens objectAtIndex:index];
+    NSScreen *screen = [screens objectAtIndex:(NSUInteger)index];
     static char buf[256];
     NSString* name = nil;
     if ([screen respondsToSelector:@selector(localizedName)]) {

@@ -118,7 +118,7 @@ _SOKOL_PRIVATE void* _sgu_mtl_readback_request(sg_image img) {
 
     int slot = img_ptr->cmn.active_slot;
     int mtl_id = img_ptr->mtl.tex[slot];
-    id<MTLTexture> tex = (id<MTLTexture>)_sg.mtl.idpool.pool[mtl_id];
+    id<MTLTexture> tex = (id<MTLTexture>)_sg.mtl.idpool.pool[(NSUInteger)mtl_id];
     if (!tex) {
         return NULL;
     }
@@ -131,7 +131,7 @@ _SOKOL_PRIVATE void* _sgu_mtl_readback_request(sg_image img) {
     int padded_bytes_per_row = (bytes_per_row + 255) & ~255;
     int buffer_size = padded_bytes_per_row * height;
 
-    id<MTLBuffer> read_buffer = [device newBufferWithLength:buffer_size options:MTLResourceStorageModeShared];
+    id<MTLBuffer> read_buffer = [device newBufferWithLength:(NSUInteger)buffer_size options:MTLResourceStorageModeShared];
     id<MTLCommandQueue> queue = _sg.mtl.cmd_queue;
     id<MTLCommandBuffer> cmd_buffer = [queue commandBuffer];
     id<MTLBlitCommandEncoder> blit_encoder = [cmd_buffer blitCommandEncoder];
@@ -140,11 +140,11 @@ _SOKOL_PRIVATE void* _sgu_mtl_readback_request(sg_image img) {
                    sourceSlice:0
                    sourceLevel:0
                   sourceOrigin:MTLOriginMake(0, 0, 0)
-                    sourceSize:MTLSizeMake(width, height, 1)
+                    sourceSize:MTLSizeMake((NSUInteger)width, (NSUInteger)height, 1)
                       toBuffer:read_buffer
              destinationOffset:0
-        destinationBytesPerRow:padded_bytes_per_row
-      destinationBytesPerImage:buffer_size];
+        destinationBytesPerRow:(NSUInteger)padded_bytes_per_row
+      destinationBytesPerImage:(NSUInteger)buffer_size];
 
     [blit_encoder endEncoding];
     [cmd_buffer commit];
@@ -189,10 +189,10 @@ _SOKOL_PRIVATE void _sgu_mtl_readback_copy_data(void* request, void* out_pixels)
     uint8_t* dst = (uint8_t*)out_pixels;
 
     if (req->padded_bytes_per_row == req->bytes_per_row) {
-        memcpy(dst, src, req->width * req->height * 4);
+        memcpy(dst, src, (size_t)req->width * (size_t)req->height * 4);
     } else {
         for (int i = 0; i < req->height; ++i) {
-            memcpy(dst + i * req->bytes_per_row, src + i * req->padded_bytes_per_row, req->bytes_per_row);
+            memcpy(dst + (size_t)i * (size_t)req->bytes_per_row, src + (size_t)i * (size_t)req->padded_bytes_per_row, (size_t)req->bytes_per_row);
         }
     }
 }
@@ -276,9 +276,9 @@ _SOKOL_PRIVATE void _sgu_gl_readback_wait(void* request) {
 _SOKOL_PRIVATE void _sgu_gl_readback_copy_data(void* request, void* out_pixels) {
     _sgu_gl_readback_request_t* req = (_sgu_gl_readback_request_t*)request;
     glBindBuffer(GL_PIXEL_PACK_BUFFER, req->pbo);
-    void* ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, req->width * req->height * 4, GL_MAP_READ_BIT);
+    void* ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, (GLsizeiptr)req->width * (GLsizeiptr)req->height * 4, GL_MAP_READ_BIT);
     if (ptr) {
-        memcpy(out_pixels, ptr, req->width * req->height * 4);
+        memcpy(out_pixels, ptr, (size_t)req->width * (size_t)req->height * 4);
         glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     }
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -373,10 +373,10 @@ _SOKOL_PRIVATE void _sgu_d3d11_readback_copy_data(void* request, void* out_pixel
     D3D11_MAPPED_SUBRESOURCE mapped;
     if (SUCCEEDED(ctx->Map(req->staging_tex, 0, D3D11_MAP_READ, 0, &mapped))) {
         if (mapped.RowPitch == (UINT)req->bytes_per_row) {
-            memcpy(out_pixels, mapped.pData, req->height * req->bytes_per_row);
+            memcpy(out_pixels, mapped.pData, (size_t)req->height * (size_t)req->bytes_per_row);
         } else {
             for (int i = 0; i < req->height; ++i) {
-                memcpy((uint8_t*)out_pixels + i * req->bytes_per_row, (uint8_t*)mapped.pData + i * mapped.RowPitch, req->bytes_per_row);
+                memcpy((uint8_t*)out_pixels + (size_t)i * (size_t)req->bytes_per_row, (uint8_t*)mapped.pData + (size_t)i * (size_t)mapped.RowPitch, (size_t)req->bytes_per_row);
             }
         }
         ctx->Unmap(req->staging_tex, 0);

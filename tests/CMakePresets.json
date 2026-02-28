@@ -1,0 +1,144 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "macos_gl_debug",
+            "generator": "Ninja",
+            "binaryDir": "build/macos_gl_debug",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_GLCORE",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "macos_gl_release",
+            "generator": "Ninja",
+            "binaryDir": "build/macos_gl_release",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_GLCORE",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "macos_metal_debug",
+            "generator": "Ninja",
+            "binaryDir": "build/macos_metal_debug",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_METAL",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "macos_metal_release",
+            "generator": "Ninja",
+            "binaryDir": "build/macos_metal_release",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_METAL",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux_gl_debug",
+            "generator": "Ninja",
+            "binaryDir": "build/linux_gl_debug",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_GLCORE",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux_gl_release",
+            "generator": "Ninja",
+            "binaryDir": "build/linux_gl_release",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_GLCORE",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux_vulkan_debug",
+            "generator": "Ninja",
+            "binaryDir": "build/linux_vulkan_debug",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_VULKAN",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux_vulkan_release",
+            "generator": "Ninja",
+            "binaryDir": "build/linux_vulkan_release",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_VULKAN",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "emsc_webgl2_debug",
+            "generator": "Ninja",
+            "binaryDir": "build/emsc_webgl2_debug",
+            "toolchainFile": "build/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_GLES3",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "emsc_webgl2_release",
+            "generator": "Ninja",
+            "binaryDir": "build/emsc_webgl2_release",
+            "toolchainFile": "build/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "cacheVariables": {
+                "SOKOL_BACKEND": "SOKOL_GLES3",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "macos_gl_debug",
+            "configurePreset": "macos_gl_debug"
+        },
+        {
+            "name": "macos_gl_release",
+            "configurePreset": "macos_gl_release"
+        },
+        {
+            "name": "macos_metal_debug",
+            "configurePreset": "macos_metal_debug"
+        },
+        {
+            "name": "macos_metal_release",
+            "configurePreset": "macos_metal_release"
+        },
+        {
+            "name": "linux_gl_debug",
+            "configurePreset": "linux_gl_debug"
+        },
+        {
+            "name": "linux_gl_release",
+            "configurePreset": "linux_gl_release"
+        },
+        {
+            "name": "linux_vulkan_debug",
+            "configurePreset": "linux_vulkan_debug"
+        },
+        {
+            "name": "linux_vulkan_release",
+            "configurePreset": "linux_vulkan_release"
+        },
+        {
+            "name": "emsc_webgl2_debug",
+            "configurePreset": "emsc_webgl2_debug"
+        },
+        {
+            "name": "emsc_webgl2_release",
+            "configurePreset": "emsc_webgl2_release"
+        }
+    ]
+}
