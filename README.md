@@ -49,6 +49,8 @@ int sapp_current_display(void);
 void sapp_set_display(int index);
 const char* sapp_display_name(int index);
 void sapp_set_fullscreen(bool enable);
+void sapp_set_swap_interval(int interval);
+int sapp_get_swap_interval(void);
 ```
 
 *Note: Most of these functions are only supported on desktop platforms (Windows, macOS, Linux).*

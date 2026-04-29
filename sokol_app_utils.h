@@ -58,6 +58,14 @@ SOKOL_APP_UTILS_API_DECL void sapp_set_display(int index);
 SOKOL_APP_UTILS_API_DECL const char* sapp_display_name(int index);
 /* sets fullscreen mode (wrapper around platform specific logic) */
 SOKOL_APP_UTILS_API_DECL void sapp_set_fullscreen(bool enable);
+/* set the swap interval:
+    0: VSync off (unthrottled rendering)
+    1: VSync on (standard refresh rate, e.g. 60 FPS)
+    2+: Adaptive/Lower refresh (e.g. 2 = 30 FPS on 60Hz display)
+*/
+SOKOL_APP_UTILS_API_DECL void sapp_set_swap_interval(int interval);
+/* get the current swap interval */
+SOKOL_APP_UTILS_API_DECL int sapp_get_swap_interval(void);
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -222,7 +230,64 @@ _SOKOL_PRIVATE const char* _sapp_macos_display_name(int index) {
   }
   return "";
 }
+
+_SOKOL_PRIVATE void _sapp_macos_set_swap_interval(int interval) {
+    _sapp.swap_interval = interval;
+    #if defined(SOKOL_METAL)
+    if (_sapp.macos.mtl.layer) {
+        if ([_sapp.macos.mtl.layer respondsToSelector:@selector(setDisplaySyncEnabled:)]) {
+            [_sapp.macos.mtl.layer setDisplaySyncEnabled:(interval > 0)];
+        }
+    }
+    if (_sapp.macos.mtl.display_link) {
+        if ([_sapp.macos.mtl.display_link respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
+            NSInteger max_fps = 60;
+            if (_sapp.macos.window) {
+                max_fps = [[_sapp.macos.window screen] maximumFramesPerSecond];
+            } else {
+                max_fps = [[NSScreen mainScreen] maximumFramesPerSecond];
+            }
+            const float preferred_fps = (float)max_fps / (interval > 0 ? (float)interval : 1.0f);
+            CAFrameRateRange frame_rate_range = { preferred_fps, preferred_fps, preferred_fps };
+            _sapp.macos.mtl.display_link.preferredFrameRateRange = frame_rate_range;
+        }
+    }
+    #endif
+    #if defined(SOKOL_GLCORE)
+    if (_sapp.macos.view) {
+        NSOpenGLContext* ctx = [_sapp.macos.view openGLContext];
+        if (ctx) {
+            GLint swap_int = (GLint)interval;
+            [ctx setValues:&swap_int forParameter:NSOpenGLContextParameterSwapInterval];
+        }
+    }
+    #endif
+}
 #endif /* _SAPP_MACOS */
+
+#if defined(_SAPP_IOS)
+_SOKOL_PRIVATE void _sapp_ios_set_swap_interval(int interval) {
+    _sapp.swap_interval = interval;
+    #if defined(SOKOL_METAL)
+    if (_sapp.ios.mtl.layer) {
+        if ([_sapp.ios.mtl.layer respondsToSelector:@selector(setDisplaySyncEnabled:)]) {
+            [_sapp.ios.mtl.layer setDisplaySyncEnabled:(interval > 0)];
+        }
+    }
+    if (_sapp.ios.mtl.display_link) {
+        if ([_sapp.ios.mtl.display_link respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
+            NSInteger max_fps = 60;
+            if (_sapp.ios.window && _sapp.ios.window.windowScene && _sapp.ios.window.windowScene.screen) {
+                max_fps = _sapp.ios.window.windowScene.screen.maximumFramesPerSecond;
+            }
+            const float preferred_fps = (float)max_fps / (interval > 0 ? (float)interval : 1.0f);
+            CAFrameRateRange frame_rate_range = { preferred_fps, preferred_fps, preferred_fps };
+            _sapp.ios.mtl.display_link.preferredFrameRateRange = frame_rate_range;
+        }
+    }
+    #endif
+}
+#endif /* _SAPP_IOS */
 
 #if defined(_SAPP_WIN32)
 typedef struct {
@@ -410,6 +475,21 @@ _SOKOL_PRIVATE const char* _sapp_win32_display_name(int index) {
   }
   return "";
 }
+
+_SOKOL_PRIVATE void _sapp_win32_set_swap_interval(int interval) {
+    _sapp.swap_interval = interval;
+    #if defined(SOKOL_GLCORE)
+    typedef BOOL (WINAPI * PFNWGLSWAPINTERVALEXTPROC) (int interval);
+    PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
+    if (wglSwapIntervalEXT) {
+        wglSwapIntervalEXT(interval);
+    }
+    #endif
+    #if defined(SOKOL_VULKAN)
+    _SOKOL_PRIVATE void _sapp_vk_recreate_swapchain(void);
+    _sapp_vk_recreate_swapchain();
+    #endif
+}
 #endif /* _SAPP_WIN32 */
 
 #if defined(_SAPP_LINUX)
@@ -578,7 +658,28 @@ _SOKOL_PRIVATE const char* _sapp_x11_display_name(int index) {
   }
   return "";
 }
+
+_SOKOL_PRIVATE void _sapp_linux_set_swap_interval(int interval) {
+    _sapp.swap_interval = interval;
+    #if defined(_SAPP_GLX)
+    typedef void (*PFNGLXSWAPINTERVALEXTPROC)(Display* dpy, GLXDrawable drawable, int interval);
+    PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC) glXGetProcAddress((const GLubyte*)"glXSwapIntervalEXT");
+    if (glXSwapIntervalEXT) {
+        glXSwapIntervalEXT(_sapp.x11.display, _sapp.x11.window, interval);
+    }
+    #elif defined(_SAPP_EGL)
+    eglSwapInterval(_sapp.egl.display, interval);
+    #endif
+    #if defined(SOKOL_VULKAN)
+    _SOKOL_PRIVATE void _sapp_vk_recreate_swapchain(void);
+    _sapp_vk_recreate_swapchain();
+    #endif
+}
 #endif /* _SAPP_LINUX */
+
+#if defined(_SAPP_EMSCRIPTEN)
+#include <emscripten.h>
+#endif
 
 SOKOL_API_IMPL void sapp_set_window_position(int x, int y) {
 #if defined(_SAPP_MACOS)
@@ -717,6 +818,32 @@ SOKOL_API_IMPL void sapp_set_fullscreen(bool enable) {
     _sapp_emsc_toggle_fullscreen();
 #endif
   }
+}
+
+SOKOL_API_IMPL void sapp_set_swap_interval(int interval) {
+#if defined(_SAPP_MACOS)
+  _sapp_macos_set_swap_interval(interval);
+#elif defined(_SAPP_IOS)
+  _sapp_ios_set_swap_interval(interval);
+#elif defined(_SAPP_WIN32)
+  _sapp_win32_set_swap_interval(interval);
+#elif defined(_SAPP_LINUX)
+  _sapp_linux_set_swap_interval(interval);
+#elif defined(_SAPP_ANDROID)
+  _sapp.swap_interval = interval;
+  #if defined(_SAPP_EGL)
+  eglSwapInterval(_sapp.egl.display, interval);
+  #endif
+#elif defined(_SAPP_EMSCRIPTEN)
+  _sapp.swap_interval = interval;
+  emscripten_set_main_loop_timing(interval == 0 ? EM_TIMING_SETTIMEOUT : EM_TIMING_RAF, interval);
+#else
+  _sapp.swap_interval = interval;
+#endif
+}
+
+SOKOL_API_IMPL int sapp_get_swap_interval(void) {
+  return _sapp.swap_interval;
 }
 
 #endif /* SOKOL_APP_UTILS_IMPL */
