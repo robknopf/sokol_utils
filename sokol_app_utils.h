@@ -237,12 +237,12 @@ _SOKOL_PRIVATE const char* _sapp_macos_display_name(int index) {
 }
 
 _SOKOL_PRIVATE void _sapp_macos_set_swap_interval(int interval) {
-    _sapp.swap_interval = interval;
+    _sapp.desc.swap_interval = interval;
     #if defined(SOKOL_METAL)
     static dispatch_source_t _sapp_macos_unthrottled_timer = nil;
-    if (_sapp.macos.mtl.layer) {
-        if ([_sapp.macos.mtl.layer respondsToSelector:@selector(setDisplaySyncEnabled:)]) {
-            [_sapp.macos.mtl.layer setDisplaySyncEnabled:(interval > 0)];
+    if (_sapp.mtl.layer) {
+        if ([_sapp.mtl.layer respondsToSelector:@selector(setDisplaySyncEnabled:)]) {
+            [_sapp.mtl.layer setDisplaySyncEnabled:(interval > 0)];
         }
     }
     if (_sapp_macos_unthrottled_timer) {
@@ -250,19 +250,19 @@ _SOKOL_PRIVATE void _sapp_macos_set_swap_interval(int interval) {
         _sapp_macos_unthrottled_timer = nil;
     }
     if (interval == 0) {
-        if (_sapp.macos.mtl.display_link) {
-            [_sapp.macos.mtl.display_link setPaused:YES];
+        if (_sapp.mtl.display_link) {
+            [_sapp.mtl.display_link setPaused:YES];
         }
         _sapp_macos_unthrottled_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
         dispatch_source_set_timer(_sapp_macos_unthrottled_timer, DISPATCH_TIME_NOW, 100 * NSEC_PER_USEC, 100 * NSEC_PER_USEC);
         dispatch_source_set_event_handler(_sapp_macos_unthrottled_timer, ^{
-            [_sapp.macos.view fallbackTimerFired:nil];
+            [_sapp.macos.view displayLinkFired:nil];
         });
         dispatch_resume(_sapp_macos_unthrottled_timer);
     } else {
-        if (_sapp.macos.mtl.display_link) {
-            [_sapp.macos.mtl.display_link setPaused:NO];
-            if ([_sapp.macos.mtl.display_link respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
+        if (_sapp.mtl.display_link) {
+            [_sapp.mtl.display_link setPaused:NO];
+            if ([_sapp.mtl.display_link respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
                 NSInteger max_fps = 60;
                 if (_sapp.macos.window) {
                     max_fps = [[_sapp.macos.window screen] maximumFramesPerSecond];
@@ -271,7 +271,7 @@ _SOKOL_PRIVATE void _sapp_macos_set_swap_interval(int interval) {
                 }
                 const float preferred_fps = (float)max_fps / (float)interval;
                 CAFrameRateRange frame_rate_range = { preferred_fps, preferred_fps, preferred_fps };
-                _sapp.macos.mtl.display_link.preferredFrameRateRange = frame_rate_range;
+                _sapp.mtl.display_link.preferredFrameRateRange = frame_rate_range;
             }
         }
     }
@@ -290,39 +290,34 @@ _SOKOL_PRIVATE void _sapp_macos_set_swap_interval(int interval) {
 
 #if defined(_SAPP_IOS)
 _SOKOL_PRIVATE void _sapp_ios_set_swap_interval(int interval) {
-    _sapp.swap_interval = interval;
+    _sapp.desc.swap_interval = interval;
     #if defined(SOKOL_METAL)
     static dispatch_source_t _sapp_ios_unthrottled_timer = nil;
-    if (_sapp.ios.mtl.layer) {
-        if ([_sapp.ios.mtl.layer respondsToSelector:@selector(setDisplaySyncEnabled:)]) {
-            [_sapp.ios.mtl.layer setDisplaySyncEnabled:(interval > 0)];
-        }
-    }
     if (_sapp_ios_unthrottled_timer) {
         dispatch_source_cancel(_sapp_ios_unthrottled_timer);
         _sapp_ios_unthrottled_timer = nil;
     }
     if (interval == 0) {
-        if (_sapp.ios.mtl.display_link) {
-            [_sapp.ios.mtl.display_link setPaused:YES];
+        if (_sapp.mtl.display_link) {
+            [_sapp.mtl.display_link setPaused:YES];
         }
         _sapp_ios_unthrottled_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
         dispatch_source_set_timer(_sapp_ios_unthrottled_timer, DISPATCH_TIME_NOW, 100 * NSEC_PER_USEC, 100 * NSEC_PER_USEC);
         dispatch_source_set_event_handler(_sapp_ios_unthrottled_timer, ^{
-            [_sapp.ios.view fallbackTimerFired:nil];
+            [_sapp.ios.view displayLinkFired:nil];
         });
         dispatch_resume(_sapp_ios_unthrottled_timer);
     } else {
-        if (_sapp.ios.mtl.display_link) {
-            [_sapp.ios.mtl.display_link setPaused:NO];
-            if ([_sapp.ios.mtl.display_link respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
+        if (_sapp.mtl.display_link) {
+            [_sapp.mtl.display_link setPaused:NO];
+            if ([_sapp.mtl.display_link respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
                 NSInteger max_fps = 60;
                 if (_sapp.ios.window && _sapp.ios.window.windowScene && _sapp.ios.window.windowScene.screen) {
                     max_fps = _sapp.ios.window.windowScene.screen.maximumFramesPerSecond;
                 }
                 const float preferred_fps = (float)max_fps / (float)interval;
                 CAFrameRateRange frame_rate_range = { preferred_fps, preferred_fps, preferred_fps };
-                _sapp.ios.mtl.display_link.preferredFrameRateRange = frame_rate_range;
+                _sapp.mtl.display_link.preferredFrameRateRange = frame_rate_range;
             }
         }
     }
@@ -518,7 +513,7 @@ _SOKOL_PRIVATE const char* _sapp_win32_display_name(int index) {
 }
 
 _SOKOL_PRIVATE void _sapp_win32_set_swap_interval(int interval) {
-    _sapp.swap_interval = interval;
+    _sapp.desc.swap_interval = interval;
     #if defined(SOKOL_GLCORE)
     typedef BOOL (WINAPI * PFNWGLSWAPINTERVALEXTPROC) (int interval);
     PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
@@ -700,7 +695,7 @@ _SOKOL_PRIVATE const char* _sapp_x11_display_name(int index) {
 }
 
 _SOKOL_PRIVATE void _sapp_linux_set_swap_interval(int interval) {
-    _sapp.swap_interval = interval;
+    _sapp.desc.swap_interval = interval;
     #if defined(_SAPP_GLX)
     typedef void (*PFNGLXSWAPINTERVALEXTPROC)(Display* dpy, GLXDrawable drawable, int interval);
     PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC) glXGetProcAddress((const GLubyte*)"glXSwapIntervalEXT");
@@ -869,20 +864,20 @@ SOKOL_API_IMPL void sapp_set_swap_interval(int interval) {
 #elif defined(_SAPP_LINUX)
   _sapp_linux_set_swap_interval(interval);
 #elif defined(_SAPP_ANDROID)
-  _sapp.swap_interval = interval;
+  _sapp.desc.swap_interval = interval;
   #if defined(_SAPP_EGL)
   eglSwapInterval(_sapp.egl.display, interval);
   #endif
 #elif defined(_SAPP_EMSCRIPTEN)
-  _sapp.swap_interval = interval;
+  _sapp.desc.swap_interval = interval;
   emscripten_set_main_loop_timing(interval == 0 ? EM_TIMING_SETTIMEOUT : EM_TIMING_RAF, interval);
 #else
-  _sapp.swap_interval = interval;
+  _sapp.desc.swap_interval = interval;
 #endif
 }
 
 SOKOL_API_IMPL int sapp_get_swap_interval(void) {
-  return _sapp.swap_interval;
+  return _sapp.desc.swap_interval;
 }
 
 #endif /* SOKOL_APP_UTILS_IMPL */
