@@ -18,3 +18,17 @@ UTEST(sokol_app_utils, swap_interval) {
     sapp_set_swap_interval(2);
     EXPECT_EQ(2, sapp_get_swap_interval());
 }
+
+UTEST(sokol_app_utils, mouse_position_tracks_event_state) {
+    float x = 0.0f;
+    float y = 0.0f;
+    _sapp.mouse.x = 12.5f;
+    _sapp.mouse.y = -3.0f;
+    sapp_set_mouse_position(10.0f, 20.0f);
+    sapp_get_mouse_position(&x, &y);
+    EXPECT_EQ(12.5f, x);
+    EXPECT_EQ(-3.0f, y);
+    sapp_get_mouse_position(0, 0);
+    _sapp.mouse.x = 0.0f;
+    _sapp.mouse.y = 0.0f;
+}

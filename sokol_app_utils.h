@@ -42,6 +42,12 @@ SOKOL_APP_UTILS_API_DECL void sapp_set_window_size(int w, int h);
 SOKOL_APP_UTILS_API_DECL void sapp_get_window_position(int *x, int *y);
 /* get the window size (content area) (only on desktop platforms) */
 SOKOL_APP_UTILS_API_DECL void sapp_get_window_size(int *w, int *h);
+/* set the mouse position in framebuffer pixels relative to the window's
+   content area (only on desktop platforms) */
+SOKOL_APP_UTILS_API_DECL void sapp_set_mouse_position(float x, float y);
+/* get the last mouse position reported by Sokol's event pipeline in
+   framebuffer pixels relative to the window's content area */
+SOKOL_APP_UTILS_API_DECL void sapp_get_mouse_position(float *x, float *y);
 /* returns the width of a display by index in pixels */
 SOKOL_APP_UTILS_API_DECL int sapp_display_width(int index);
 /* returns the height of a display by index in pixels */
@@ -146,6 +152,23 @@ _SOKOL_PRIVATE void _sapp_macos_get_window_size(int *w, int *h) {
       *w = 0;
     if (h)
       *h = 0;
+  }
+}
+
+_SOKOL_PRIVATE void _sapp_macos_set_mouse_position(float x, float y) {
+  if (_sapp.macos.window) {
+    const CGFloat scale = (CGFloat)_sapp.dpi_scale;
+    const NSPoint window_position = NSMakePoint(
+        (CGFloat)x / scale,
+        ((CGFloat)_sapp.framebuffer_height - (CGFloat)y - 1.0) / scale);
+    const NSPoint screen_position =
+        [_sapp.macos.window convertPointToScreen:window_position];
+    NSArray *screens = [NSScreen screens];
+    if (screens && [screens count] > 0) {
+      const NSRect primary_frame = [[screens objectAtIndex:0] frame];
+      CGWarpMouseCursorPosition(CGPointMake(
+          screen_position.x, NSMaxY(primary_frame) - screen_position.y));
+    }
   }
 }
 
@@ -418,6 +441,17 @@ _SOKOL_PRIVATE void _sapp_win32_get_window_size(int *w, int *h) {
   }
 }
 
+_SOKOL_PRIVATE void _sapp_win32_set_mouse_position(float x, float y) {
+  if (_sapp.win32.hwnd) {
+    POINT position;
+    position.x = (LONG)_sapp_roundf_gzero(x / _sapp.win32.dpi.mouse_scale);
+    position.y = (LONG)_sapp_roundf_gzero(y / _sapp.win32.dpi.mouse_scale);
+    if (ClientToScreen(_sapp.win32.hwnd, &position)) {
+      SetCursorPos(position.x, position.y);
+    }
+  }
+}
+
 _SOKOL_PRIVATE bool _sapp_win32_window_focused(void) {
   if (_sapp.win32.hwnd) {
     return GetForegroundWindow() == _sapp.win32.hwnd;
@@ -565,6 +599,14 @@ _SOKOL_PRIVATE void _sapp_x11_get_window_size(int *w, int *h) {
       *w = 0;
     if (h)
       *h = 0;
+  }
+}
+
+_SOKOL_PRIVATE void _sapp_x11_set_mouse_position(float x, float y) {
+  if (_sapp.x11.display) {
+    XWarpPointer(_sapp.x11.display, None, _sapp.x11.window, 0, 0, 0, 0,
+                 _sapp_roundf_gzero(x), _sapp_roundf_gzero(y));
+    XFlush(_sapp.x11.display);
   }
 }
 
@@ -753,6 +795,29 @@ SOKOL_API_IMPL void sapp_get_window_size(int *w, int *h) {
 #elif defined(_SAPP_LINUX)
   _sapp_x11_get_window_size(w, h);
 #endif
+}
+
+SOKOL_API_IMPL void sapp_set_mouse_position(float x, float y) {
+  if (_sapp.mouse.locked) {
+    return;
+  }
+#if defined(_SAPP_MACOS)
+  _sapp_macos_set_mouse_position(x, y);
+#elif defined(_SAPP_WIN32)
+  _sapp_win32_set_mouse_position(x, y);
+#elif defined(_SAPP_LINUX)
+  _sapp_x11_set_mouse_position(x, y);
+#else
+  (void)x;
+  (void)y;
+#endif
+}
+
+SOKOL_API_IMPL void sapp_get_mouse_position(float *x, float *y) {
+  if (x)
+    *x = _sapp.mouse.x;
+  if (y)
+    *y = _sapp.mouse.y;
 }
 
 SOKOL_API_IMPL bool sapp_window_focused(void) {

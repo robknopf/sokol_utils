@@ -41,6 +41,8 @@ void sapp_set_window_position(int x, int y);
 void sapp_set_window_size(int w, int h);
 void sapp_get_window_position(int *x, int *y);
 void sapp_get_window_size(int *w, int *h);
+void sapp_set_mouse_position(float x, float y);
+void sapp_get_mouse_position(float *x, float *y);
 int sapp_display_width(int index);
 int sapp_display_height(int index);
 bool sapp_window_focused(void);
@@ -54,6 +56,15 @@ int sapp_get_swap_interval(void);
 ```
 
 *Note: Most of these functions are only supported on desktop platforms (Windows, macOS, Linux).*
+
+Mouse positions are relative to the upper-left corner of the window's content
+area and use framebuffer pixels, matching `sapp_event.mouse_x` and
+`sapp_event.mouse_y`. The getter returns Sokol's last event position so it has
+the same capture behavior as mouse events: dragging may report coordinates
+outside the content area, movement without capture stops at leave, and the
+absolute position remains frozen while the mouse is locked. A warp is reflected
+by the getter when Sokol receives the resulting native mouse event. Setting the
+position while the mouse is locked, or on an unsupported platform, is a no-op.
 
 ### sokol_gfx_utils.h
 
