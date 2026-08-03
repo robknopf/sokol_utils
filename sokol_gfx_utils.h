@@ -69,9 +69,10 @@ SOKOL_GFX_UTILS_API_DECL void sg_readback_copy_data(void* request, void* out_pix
 SOKOL_GFX_UTILS_API_DECL void sg_readback_destroy(void* request);
 
 /*
-    Asynchronous GPU duration for the encoded body of one labeled sg_pass.
-    Results are reported only after the command buffer containing the pass has
-    completed.
+    Asynchronous GPU durations for labeled sg_pass bodies. Metal devices that
+    do not support encoder-boundary counter sampling report one "Frame" result
+    for the entire command buffer instead. Results are reported only after the
+    command buffer has completed.
 */
 #define SG_GPU_PASS_TIMING_MAX_PASSES (256)
 #define SG_GPU_PASS_TIMING_LABEL_SIZE (96)
@@ -96,7 +97,8 @@ SOKOL_GFX_UTILS_API_DECL bool sg_gpu_pass_timings_supported(void);
 
 /*
     Copies and consumes the oldest completed GPU frame. This function never
-    waits for the GPU. Returns the number of copied pass timings.
+    waits for the GPU. Returns the number of copied pass timings, or one
+    "Frame" timing when only command-buffer duration is available.
 */
 SOKOL_GFX_UTILS_API_DECL int sg_gpu_pass_timings_poll(sg_gpu_pass_timing* timings, int max_timings);
 
@@ -157,6 +159,7 @@ typedef struct {
     uint32_t pass_count;
     int active_pass;
     bool start_sampled;
+    bool command_buffer_fallback;
     _sgu_mtl_gpu_pass_t passes[SG_GPU_PASS_TIMING_MAX_PASSES];
 } _sgu_mtl_gpu_timing_frame_t;
 
@@ -195,23 +198,29 @@ _SOKOL_PRIVATE bool _sgu_mtl_gpu_timing_initialize(void) {
             [device supportsCounterSampling:MTLCounterSamplingPointAtDrawBoundary];
         _sgu_mtl_gpu_timing_state.compute_sampling_supported =
             [device supportsCounterSampling:MTLCounterSamplingPointAtDispatchBoundary];
-        if (!_sgu_mtl_gpu_timing_state.render_sampling_supported &&
-            !_sgu_mtl_gpu_timing_state.compute_sampling_supported) {
-            return false;
-        }
-        for (id<MTLCounterSet> counter_set in device.counterSets) {
-            if ([counter_set.name isEqualToString:MTLCommonCounterSetTimestamp]) {
-                _sgu_mtl_gpu_timing_state.timestamp_counter_set = counter_set;
+        if (_sgu_mtl_gpu_timing_state.render_sampling_supported ||
+            _sgu_mtl_gpu_timing_state.compute_sampling_supported) {
+            for (id<MTLCounterSet> counter_set in device.counterSets) {
+                if ([counter_set.name isEqualToString:MTLCommonCounterSetTimestamp]) {
+                    _sgu_mtl_gpu_timing_state.timestamp_counter_set = counter_set;
 #if !__has_feature(objc_arc)
-                [counter_set retain];
+                    [counter_set retain];
 #endif
-                _sgu_mtl_gpu_timing_state.current.active_pass = -1;
-                for (int index = 0; index < _SGU_GPU_TIMING_PENDING_FRAMES; ++index) {
-                    _sgu_mtl_gpu_timing_state.pending[index].active_pass = -1;
+                    break;
                 }
-                return true;
+            }
+            if (!_sgu_mtl_gpu_timing_state.timestamp_counter_set) {
+                _sgu_mtl_gpu_timing_state.render_sampling_supported = false;
+                _sgu_mtl_gpu_timing_state.compute_sampling_supported = false;
             }
         }
+        _sgu_mtl_gpu_timing_state.current.active_pass = -1;
+        for (int index = 0; index < _SGU_GPU_TIMING_PENDING_FRAMES; ++index) {
+            _sgu_mtl_gpu_timing_state.pending[index].active_pass = -1;
+        }
+        /* Command-buffer GPU duration is available even when encoder boundary
+           counter sampling is not, as on Apple M4 GPUs. */
+        return true;
     }
     return false;
 }
@@ -259,17 +268,23 @@ _SOKOL_PRIVATE void _sgu_mtl_gpu_timing_begin_pass(const sg_pass* pass) {
     _sgu_mtl_gpu_timing_frame_t* frame = &_sgu_mtl_gpu_timing_state.current;
     frame->active_pass = -1;
     frame->start_sampled = false;
-    if (!_sgu_gpu_pass_timing_state.enabled || frame->pass_count >= SG_GPU_PASS_TIMING_MAX_PASSES) {
+    if (!_sgu_gpu_pass_timing_state.enabled) {
+        return;
+    }
+    if (frame->pass_count >= SG_GPU_PASS_TIMING_MAX_PASSES) {
+        frame->command_buffer_fallback = true;
         return;
     }
     const bool is_compute = pass && pass->compute;
     if ((is_compute && !_sgu_mtl_gpu_timing_state.compute_sampling_supported) ||
         (!is_compute && !_sgu_mtl_gpu_timing_state.render_sampling_supported)) {
+        frame->command_buffer_fallback = true;
         return;
     }
     if (!frame->sample_buffer) {
         frame->sample_buffer = _sgu_mtl_gpu_timing_make_sample_buffer();
         if (!frame->sample_buffer) {
+            frame->command_buffer_fallback = true;
             return;
         }
         frame->frame_index = _sg.frame_index;
@@ -297,6 +312,13 @@ _SOKOL_PRIVATE void _sgu_mtl_gpu_timing_sample_start(void) {
 
 _SOKOL_PRIVATE void _sgu_mtl_gpu_timing_end_pass(void) {
     _sgu_mtl_gpu_timing_frame_t* frame = &_sgu_mtl_gpu_timing_state.current;
+    if (_sgu_gpu_pass_timing_state.enabled && !frame->command_buffer && _sg.mtl.cmd_buffer) {
+        frame->command_buffer = _sg.mtl.cmd_buffer;
+        frame->frame_index = _sg.frame_index;
+#if !__has_feature(objc_arc)
+        [frame->command_buffer retain];
+#endif
+    }
     if (frame->active_pass < 0 || !frame->sample_buffer) {
         return;
     }
@@ -304,14 +326,12 @@ _SOKOL_PRIVATE void _sgu_mtl_gpu_timing_end_pass(void) {
     if (frame->start_sampled) {
         const _sgu_mtl_gpu_pass_t* timing = &frame->passes[frame->active_pass];
         if (@available(macOS 10.15, iOS 14.0, *)) {
-            _sgu_mtl_gpu_timing_sample(frame->sample_buffer, timing->end_sample);
+            if (!_sgu_mtl_gpu_timing_sample(frame->sample_buffer, timing->end_sample)) {
+                frame->command_buffer_fallback = true;
+            }
         }
-    }
-    if (!frame->command_buffer && _sg.mtl.cmd_buffer) {
-        frame->command_buffer = _sg.mtl.cmd_buffer;
-#if !__has_feature(objc_arc)
-        [frame->command_buffer retain];
-#endif
+    } else {
+        frame->command_buffer_fallback = true;
     }
     frame->active_pass = -1;
     frame->start_sampled = false;
@@ -319,13 +339,13 @@ _SOKOL_PRIVATE void _sgu_mtl_gpu_timing_end_pass(void) {
 
 _SOKOL_PRIVATE void _sgu_mtl_gpu_timing_commit(void) {
     _sgu_mtl_gpu_timing_frame_t* current = &_sgu_mtl_gpu_timing_state.current;
-    if (!current->sample_buffer || current->pass_count == 0 || !current->command_buffer) {
+    if (!current->command_buffer) {
         _sgu_mtl_gpu_timing_release_frame(current);
         return;
     }
     for (int index = 0; index < _SGU_GPU_TIMING_PENDING_FRAMES; ++index) {
         _sgu_mtl_gpu_timing_frame_t* pending = &_sgu_mtl_gpu_timing_state.pending[index];
-        if (!pending->sample_buffer) {
+        if (!pending->command_buffer) {
             *pending = *current;
             memset(current, 0, sizeof(*current));
             current->active_pass = -1;
@@ -340,7 +360,7 @@ _SOKOL_PRIVATE int _sgu_mtl_gpu_timing_poll(sg_gpu_pass_timing* timings, int max
     _sgu_mtl_gpu_timing_frame_t* oldest = NULL;
     for (int index = 0; index < _SGU_GPU_TIMING_PENDING_FRAMES; ++index) {
         _sgu_mtl_gpu_timing_frame_t* pending = &_sgu_mtl_gpu_timing_state.pending[index];
-        if (pending->sample_buffer && (!oldest || pending->frame_index < oldest->frame_index)) {
+        if (pending->command_buffer && (!oldest || pending->frame_index < oldest->frame_index)) {
             oldest = pending;
         }
     }
@@ -350,6 +370,20 @@ _SOKOL_PRIVATE int _sgu_mtl_gpu_timing_poll(sg_gpu_pass_timing* timings, int max
     if ([oldest->command_buffer status] != MTLCommandBufferStatusCompleted) {
         _sgu_mtl_gpu_timing_release_frame(oldest);
         return 0;
+    }
+    if (oldest->command_buffer_fallback || !oldest->sample_buffer || oldest->pass_count == 0) {
+        const CFTimeInterval start = oldest->command_buffer.GPUStartTime;
+        const CFTimeInterval end = oldest->command_buffer.GPUEndTime;
+        if (start <= 0.0 || end < start) {
+            _sgu_mtl_gpu_timing_release_frame(oldest);
+            return 0;
+        }
+        strncpy(timings[0].label, "Frame", SG_GPU_PASS_TIMING_LABEL_SIZE);
+        timings[0].label[SG_GPU_PASS_TIMING_LABEL_SIZE - 1] = 0;
+        timings[0].frame_index = oldest->frame_index;
+        timings[0].milliseconds = (double)(end - start) * 1000.0;
+        _sgu_mtl_gpu_timing_release_frame(oldest);
+        return 1;
     }
     const uint32_t sample_count = oldest->pass_count * 2;
     NSData* data = nil;

@@ -93,5 +93,6 @@ int sg_gpu_pass_timings_poll(sg_gpu_pass_timing* timings, int max_timings);
 
 GPU pass timings are Metal-only for now. Call setup before installing
 other trace hooks, enable recording as needed, and poll for the oldest completed
-frame without blocking the GPU. Call shutdown after `sg_shutdown` has drained
-in-flight work.
+frame without blocking the GPU. Metal devices without encoder-boundary counter
+sampling return one `Frame` timing for the entire command buffer. Call shutdown
+after `sg_shutdown` has drained in-flight work.
