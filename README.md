@@ -4,7 +4,7 @@ Extension utilities for the [sokol](https://github.com/floooh/sokol) headers.
 
 Currently, this repository contains:
 - `sokol_app_utils.h`: Additional functionality for `sokol_app.h`.
-- `sokol_gfx_utils.h`: Additional functionality for `sokol_gfx.h` (currently readback support).
+- `sokol_gfx_utils.h`: Additional functionality for `sokol_gfx.h` (readback and Metal-only GPU pass timing support).
 
 ## Usage
 
@@ -74,4 +74,24 @@ bool sg_readback_is_ready(void* request);
 void sg_readback_wait(void* request);
 void sg_readback_copy_data(void* request, void* out_pixels);
 void sg_readback_destroy(void* request);
+
+#define SG_GPU_PASS_TIMING_MAX_PASSES (256)
+#define SG_GPU_PASS_TIMING_LABEL_SIZE (96)
+
+typedef struct sg_gpu_pass_timing {
+    char label[SG_GPU_PASS_TIMING_LABEL_SIZE];
+    uint64_t frame_index;
+    double milliseconds;
+} sg_gpu_pass_timing;
+
+bool sg_gpu_pass_timings_setup(void);
+void sg_gpu_pass_timings_shutdown(void);
+void sg_gpu_pass_timings_set_enabled(bool enabled);
+bool sg_gpu_pass_timings_supported(void);
+int sg_gpu_pass_timings_poll(sg_gpu_pass_timing* timings, int max_timings);
 ```
+
+GPU pass timings are Metal-only for now. Call setup before installing
+other trace hooks, enable recording as needed, and poll for the oldest completed
+frame without blocking the GPU. Call shutdown after `sg_shutdown` has drained
+in-flight work.
