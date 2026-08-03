@@ -162,6 +162,8 @@ typedef struct {
 
 typedef struct {
     id<MTLCounterSet> timestamp_counter_set;
+    bool render_sampling_supported;
+    bool compute_sampling_supported;
     _sgu_mtl_gpu_timing_frame_t current;
     _sgu_mtl_gpu_timing_frame_t pending[_SGU_GPU_TIMING_PENDING_FRAMES];
 } _sgu_mtl_gpu_timing_state_t;
@@ -186,7 +188,15 @@ _SOKOL_PRIVATE void _sgu_mtl_gpu_timing_release_frame(_sgu_mtl_gpu_timing_frame_
 _SOKOL_PRIVATE bool _sgu_mtl_gpu_timing_initialize(void) {
     if (@available(macOS 10.15, iOS 14.0, *)) {
         id<MTLDevice> device = _sg.mtl.device;
-        if (!device || ![device supportsCounterSampling:MTLCounterSamplingPointAtStageBoundary]) {
+        if (!device) {
+            return false;
+        }
+        _sgu_mtl_gpu_timing_state.render_sampling_supported =
+            [device supportsCounterSampling:MTLCounterSamplingPointAtDrawBoundary];
+        _sgu_mtl_gpu_timing_state.compute_sampling_supported =
+            [device supportsCounterSampling:MTLCounterSamplingPointAtDispatchBoundary];
+        if (!_sgu_mtl_gpu_timing_state.render_sampling_supported &&
+            !_sgu_mtl_gpu_timing_state.compute_sampling_supported) {
             return false;
         }
         for (id<MTLCounterSet> counter_set in device.counterSets) {
@@ -234,11 +244,11 @@ _SOKOL_PRIVATE id<MTLCounterSampleBuffer> _sgu_mtl_gpu_timing_make_sample_buffer
 }
 
 _SOKOL_PRIVATE bool _sgu_mtl_gpu_timing_sample(id<MTLCounterSampleBuffer> sample_buffer, uint32_t sample_index) {
-    if (_sg.mtl.render_cmd_encoder) {
+    if (_sg.mtl.render_cmd_encoder && _sgu_mtl_gpu_timing_state.render_sampling_supported) {
         [_sg.mtl.render_cmd_encoder sampleCountersInBuffer:sample_buffer atSampleIndex:sample_index withBarrier:YES];
         return true;
     }
-    if (_sg.mtl.compute_cmd_encoder) {
+    if (_sg.mtl.compute_cmd_encoder && _sgu_mtl_gpu_timing_state.compute_sampling_supported) {
         [_sg.mtl.compute_cmd_encoder sampleCountersInBuffer:sample_buffer atSampleIndex:sample_index withBarrier:YES];
         return true;
     }
@@ -250,6 +260,11 @@ _SOKOL_PRIVATE void _sgu_mtl_gpu_timing_begin_pass(const sg_pass* pass) {
     frame->active_pass = -1;
     frame->start_sampled = false;
     if (!_sgu_gpu_pass_timing_state.enabled || frame->pass_count >= SG_GPU_PASS_TIMING_MAX_PASSES) {
+        return;
+    }
+    const bool is_compute = pass && pass->compute;
+    if ((is_compute && !_sgu_mtl_gpu_timing_state.compute_sampling_supported) ||
+        (!is_compute && !_sgu_mtl_gpu_timing_state.render_sampling_supported)) {
         return;
     }
     if (!frame->sample_buffer) {
