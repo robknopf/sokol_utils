@@ -93,6 +93,10 @@ int sg_gpu_pass_timings_poll(sg_gpu_pass_timing* timings, int max_timings);
 
 GPU pass timings are Metal-only for now. Call setup before installing
 other trace hooks, enable recording as needed, and poll for the oldest completed
-frame without blocking the GPU. Metal devices without encoder-boundary counter
-sampling return one `Frame` timing for the entire command buffer. Call shutdown
-after `sg_shutdown` has drained in-flight work.
+frame without blocking the GPU. Provide space for `SG_GPU_PASS_TIMING_MAX_PASSES
++ 1` results: `Frame` is measured independently from the whole command buffer,
+followed by labeled passes measured with stage-boundary counter attachments.
+Render timings combine vertex/fragment intervals, excluding gaps and counting
+their overlap once. Pass timings can overlap and must not be summed as frame time. Invalid or empty
+counter intervals are omitted. Devices without stage counters return only the
+`Frame` timing. Call shutdown after `sg_shutdown` has drained in-flight work.
