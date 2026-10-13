@@ -612,15 +612,8 @@ _SOKOL_PRIVATE void _sapp_x11_set_mouse_position(float x, float y) {
   }
 }
 
-_SOKOL_PRIVATE bool _sapp_x11_window_focused(void) {
-  if (_sapp.x11.display) {
-    Window focused;
-    int revert_to;
-    XGetInputFocus(_sapp.x11.display, &focused, &revert_to);
-    return focused == _sapp.x11.window;
-  }
-  return false;
-}
+/* [libwgrender] _sapp_x11_window_focused() removed: sokol_app.h defines it now (it tracks
+   focus from FocusIn/FocusOut events). */
 
 _SOKOL_PRIVATE int _sapp_x11_display_width(int index) {
   int num_displays = 0;
