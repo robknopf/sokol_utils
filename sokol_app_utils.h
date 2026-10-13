@@ -732,11 +732,9 @@ _SOKOL_PRIVATE const char* _sapp_x11_display_name(int index) {
 _SOKOL_PRIVATE void _sapp_linux_set_swap_interval(int interval) {
     _sapp.desc.swap_interval = interval;
     #if defined(_SAPP_GLX)
-    typedef void (*PFNGLXSWAPINTERVALEXTPROC)(Display* dpy, GLXDrawable drawable, int interval);
-    PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC) glXGetProcAddress((const GLubyte*)"glXSwapIntervalEXT");
-    if (glXSwapIntervalEXT) {
-        glXSwapIntervalEXT(_sapp.x11.display, _sapp.x11.window, interval);
-    }
+    /* [libwgrender] use sokol_app's GLX loader: glXGetProcAddress isn't declared (sokol
+       loads libGL dynamically), and the drawable is the GLX window, not the X11 one */
+    _sapp_glx_swapinterval(interval);
     #elif defined(_SAPP_EGL)
     eglSwapInterval(_sapp.egl.display, interval);
     #endif
