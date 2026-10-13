@@ -1,3 +1,17 @@
+/*
+    sokol_app_utils.h -- extension functions for sokol_app.h
+
+    Project URL: https://github.com/squk/sokol_utils
+
+    Altered source: this is the Whirling Gizmo fork's version
+    (https://github.com/robknopf/sokol_utils), not the original. Changed from
+    squk/sokol_utils: sapp_display_position(), window style (resizable,
+    decorated), sapp_can_move_window() and window visibility are added; the
+    Linux swap interval uses sokol_app's GLX loader; _sapp_x11_window_focused(),
+    which sokol_app.h now defines, is removed. Changes first made in
+    libwgrender are marked "[libwgrender]". The fork's git history has each
+    change.
+*/
 #if defined(SOKOL_IMPL) && !defined(SOKOL_APP_UTILS_IMPL)
 #define SOKOL_APP_UTILS_IMPL
 #endif
