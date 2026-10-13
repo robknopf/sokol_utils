@@ -616,6 +616,9 @@ _SOKOL_PRIVATE void _sapp_x11_set_mouse_position(float x, float y) {
    focus from FocusIn/FocusOut events). */
 
 _SOKOL_PRIVATE int _sapp_x11_display_width(int index) {
+  if (!_sapp.x11.display) {
+    return 0;
+  }
   int num_displays = 0;
   int width = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
@@ -632,6 +635,9 @@ _SOKOL_PRIVATE int _sapp_x11_display_width(int index) {
 }
 
 _SOKOL_PRIVATE int _sapp_x11_display_height(int index) {
+  if (!_sapp.x11.display) {
+    return 0;
+  }
   int num_displays = 0;
   int height = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
@@ -648,6 +654,9 @@ _SOKOL_PRIVATE int _sapp_x11_display_height(int index) {
 }
 
 _SOKOL_PRIVATE int _sapp_x11_num_displays(void) {
+  if (!_sapp.x11.display) {
+    return 1;
+  }
   int num_displays = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
@@ -658,6 +667,9 @@ _SOKOL_PRIVATE int _sapp_x11_num_displays(void) {
 }
 
 _SOKOL_PRIVATE int _sapp_x11_current_display(void) {
+  if (!_sapp.x11.display) {
+    return 0;
+  }
   int num_displays = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
@@ -687,6 +699,9 @@ _SOKOL_PRIVATE int _sapp_x11_current_display(void) {
 }
 
 _SOKOL_PRIVATE void _sapp_x11_set_display(int index) {
+  if (!_sapp.x11.display) {
+    return;
+  }
   int num_displays = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
@@ -711,6 +726,9 @@ _SOKOL_PRIVATE void _sapp_x11_set_display(int index) {
 }
 
 _SOKOL_PRIVATE const char* _sapp_x11_display_name(int index) {
+  if (!_sapp.x11.display) {
+    return "";
+  }
   int num_displays = 0;
   XRRMonitorInfo* displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
