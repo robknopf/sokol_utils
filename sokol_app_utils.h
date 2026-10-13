@@ -8,7 +8,8 @@
     squk/sokol_utils: sapp_display_position(), window style (resizable,
     decorated), sapp_can_move_window() and window visibility are added; the
     Linux swap interval uses sokol_app's GLX loader; _sapp_x11_window_focused(),
-    which sokol_app.h now defines, is removed. Changes first made in
+    which sokol_app.h now defines, is removed; the X11 display queries
+    answer before sokol_app has a display. Changes first made in
     libwgrender are marked "[libwgrender]". The fork's git history has each
     change.
 */
@@ -781,6 +782,9 @@ _SOKOL_PRIVATE void _sapp_x11_set_mouse_position(float x, float y) {
    focus from FocusIn/FocusOut events). */
 
 _SOKOL_PRIVATE int _sapp_x11_display_width(int index) {
+  if (!_sapp.x11.display) {
+    return 0;
+  }
   int num_displays = 0;
   int width = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
@@ -797,6 +801,9 @@ _SOKOL_PRIVATE int _sapp_x11_display_width(int index) {
 }
 
 _SOKOL_PRIVATE int _sapp_x11_display_height(int index) {
+  if (!_sapp.x11.display) {
+    return 0;
+  }
   int num_displays = 0;
   int height = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
@@ -814,6 +821,11 @@ _SOKOL_PRIVATE int _sapp_x11_display_height(int index) {
 
 /* [libwgrender] display position */
 _SOKOL_PRIVATE void _sapp_x11_display_position(int index, int *x, int *y) {
+  if (!_sapp.x11.display) {
+    *x = 0;
+    *y = 0;
+    return;
+  }
   int num_displays = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
@@ -829,6 +841,9 @@ _SOKOL_PRIVATE void _sapp_x11_display_position(int index, int *x, int *y) {
 }
 
 _SOKOL_PRIVATE int _sapp_x11_num_displays(void) {
+  if (!_sapp.x11.display) {
+    return 1;
+  }
   int num_displays = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
@@ -839,6 +854,9 @@ _SOKOL_PRIVATE int _sapp_x11_num_displays(void) {
 }
 
 _SOKOL_PRIVATE int _sapp_x11_current_display(void) {
+  if (!_sapp.x11.display) {
+    return 0;
+  }
   int num_displays = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
@@ -868,6 +886,9 @@ _SOKOL_PRIVATE int _sapp_x11_current_display(void) {
 }
 
 _SOKOL_PRIVATE void _sapp_x11_set_display(int index) {
+  if (!_sapp.x11.display) {
+    return;
+  }
   int num_displays = 0;
   XRRMonitorInfo *displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
@@ -892,6 +913,9 @@ _SOKOL_PRIVATE void _sapp_x11_set_display(int index) {
 }
 
 _SOKOL_PRIVATE const char* _sapp_x11_display_name(int index) {
+  if (!_sapp.x11.display) {
+    return "";
+  }
   int num_displays = 0;
   XRRMonitorInfo* displays = XRRGetMonitors(
       _sapp.x11.display, DefaultRootWindow(_sapp.x11.display), True, &num_displays);
