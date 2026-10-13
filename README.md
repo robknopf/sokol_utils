@@ -2,13 +2,13 @@
 
 This is the Whirling Gizmo fork of [squk/sokol_utils](https://github.com/squk/sokol_utils),
 used by Whirling Gizmo projects with the Whirling Gizmo fork of sokol,
-[robknopf/sokol](https://github.com/robknopf/sokol). It adds to `sokol_app_utils.h`:
+[whirlinggizmo/sokol](https://github.com/whirlinggizmo/sokol). It adds to `sokol_app_utils.h`:
 display positions, window style (resizable, decorated), whether a window can move,
 and window visibility, and fixes the Linux build against current sokol_app.h. The
 altered headers say so at their tops, as the zlib license asks; the git history has
 each change. Agents working here follow [AGENTS.md](AGENTS.md).
 
-Checked against robknopf/sokol at `1b0a77acc819a47575919af3e64c737d13e18d51` (upstream to 5e94d12, 2026-10-12) and the earlier `8194062e0446577671425e3d2a3cc232ed016819`: `tests/test_linux.sh`'s GL debug and release builds compile without warnings and their tests pass. Not yet checked: Vulkan, Windows, macOS and Emscripten.
+Checked against whirlinggizmo/sokol at `1b0a77acc819a47575919af3e64c737d13e18d51` (upstream to 5e94d12, 2026-10-12) and the earlier `8194062e0446577671425e3d2a3cc232ed016819`: `tests/test_linux.sh`'s GL debug and release builds compile without warnings and their tests pass. Not yet checked: Vulkan, Windows, macOS and Emscripten.
 
 # sokol_utils
 

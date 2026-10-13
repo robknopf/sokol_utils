@@ -4,7 +4,7 @@
     Project URL: https://github.com/squk/sokol_utils
 
     Altered source: this is the Whirling Gizmo fork's version
-    (https://github.com/robknopf/sokol_utils), not the original. Changed from
+    (https://github.com/whirlinggizmo/sokol_utils), not the original. Changed from
     squk/sokol_utils: sapp_display_position(), window style (resizable,
     decorated), sapp_can_move_window() and window visibility are added; the
     Linux swap interval uses sokol_app's GLX loader; _sapp_x11_window_focused(),

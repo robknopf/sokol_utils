@@ -1,7 +1,7 @@
-## Fork policy (robknopf/sokol_utils only, never upstream)
+## Fork policy (whirlinggizmo/sokol_utils only, never upstream)
 
 This repository is the Whirling Gizmo fork of squk/sokol_utils, used by Whirling
-Gizmo projects with the Whirling Gizmo fork of sokol (robknopf/sokol). In this
+Gizmo projects with the Whirling Gizmo fork of sokol (whirlinggizmo/sokol). In this
 fork, the owner allows LLM agents to edit the headers, tests and docs, and to add,
 commit and push when the user asks. This applies only to work in this fork.
 
@@ -17,6 +17,6 @@ squk/sokol_utils:
 ## Keeping in step with sokol
 
 `sokol_app_utils.h` reads sokol_app.h's private state (`_sapp`), so it must
-compile against the robknopf/sokol commit its users pin. The commit it was last
+compile against the whirlinggizmo/sokol commit its users pin. The commit it was last
 checked against is in the README's fork section. Check again whenever either
 side changes.
