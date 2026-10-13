@@ -5,8 +5,9 @@ Gizmo projects with the Whirling Gizmo fork of sokol (robknopf/sokol). In this
 fork, the owner allows LLM agents to edit the headers, tests and docs, and to add,
 commit and push when the user asks. This applies only to work in this fork.
 
-squk/sokol_utils has no stated rules for LLM contributions. Ask its owner before
-offering one upstream, and say how it was made. For a PR to squk/sokol_utils:
+squk/sokol_utils has no stated rules for LLM contributions. A PR to it says in its
+description that it was prepared with an AI coding agent. For a PR to
+squk/sokol_utils:
 
 - Create the branch from `upstream/main` (https://github.com/squk/sokol_utils),
   never from this fork's `main`, and cherry-pick only the commits for the PR.
