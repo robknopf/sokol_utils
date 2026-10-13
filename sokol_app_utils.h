@@ -326,7 +326,9 @@ _SOKOL_PRIVATE void _sapp_macos_set_swap_interval(int interval) {
         });
         dispatch_resume(_sapp_macos_unthrottled_timer);
     } else {
-        if (_sapp.mtl.display_link) {
+        // Keep the timer frame driver active for obscured windows and direct
+        // launches. Their paused display link must not supply frame timing.
+        if (_sapp.mtl.display_link && nil == _sapp.mtl.obscured_timer) {
             [_sapp.mtl.display_link setPaused:NO];
             if ([_sapp.mtl.display_link respondsToSelector:@selector(setPreferredFrameRateRange:)]) {
                 NSInteger max_fps = 60;
