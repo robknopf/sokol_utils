@@ -921,7 +921,11 @@ SOKOL_API_IMPL void sapp_set_fullscreen(bool enable) {
 #if defined(_SAPP_WIN32)
     _sapp_win32_set_fullscreen(enable, SWP_SHOWWINDOW);
 #elif defined(_SAPP_LINUX)
+    /* as sokol_app's _sapp_x11_toggle_fullscreen(): the flag sapp_is_fullscreen() reads,
+       the window manager asked, and the dimensions updated */
+    _sapp.fullscreen = enable;
     _sapp_x11_set_fullscreen(enable);
+    _sapp_x11_update_dimensions_from_window_size();
 #elif defined(_SAPP_MACOS)
     _sapp_macos_toggle_fullscreen();
 #elif defined(_SAPP_EMSCRIPTEN)
