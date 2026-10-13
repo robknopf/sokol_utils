@@ -8,7 +8,7 @@ and window visibility, and fixes the Linux build against current sokol_app.h. Th
 altered headers say so at their tops, as the zlib license asks; the git history has
 each change. Agents working here follow [AGENTS.md](AGENTS.md).
 
-Checked against robknopf/sokol at `8194062e0446577671425e3d2a3cc232ed016819`.
+Checked against robknopf/sokol at `8194062e0446577671425e3d2a3cc232ed016819`: `tests/test_linux.sh`'s GL debug and release builds compile without warnings and their tests pass. Not yet checked: Vulkan, Windows, macOS and Emscripten.
 
 # sokol_utils
 
